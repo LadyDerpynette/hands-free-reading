@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hands-free reading for FanFiction.net
 // @namespace    https://github.com/LadyDerpynette
-// @version      1.2.7
+// @version      1.2.8
 // @description  Nod to scroll (front camera, face tracking runs on your phone) or Auto-scroll, on any site (FanFiction.net chapters know their next/previous chapter). Personal use only, no commercial use.
 // @author       LadyDerpynette
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0
@@ -26,7 +26,7 @@
 
   if (!document.body) return;
   if (document.querySelector('meta[name="hands-free"]')) return;   // the page has hands-free reading built in
-  var VER = '1.2.7';
+  var VER = '1.2.8';
   // a plain notice on the page (never a browser popup): two copies on, or this copy stopped with an error
   function note(msg) {
     var n = document.createElement('div'); n.className = 'oi-note'; n.setAttribute('role', 'alert');
@@ -175,7 +175,7 @@
     '<button type="button" role="radio" data-m="tap"><b>Tap to scroll</b><span>Tap the text to move down, or back up. You choose where to tap</span></button></div>' +
     '<div class="hf-set" data-for="tap">' +
     '<div class="hf-row"><span>Each tap moves</span><div class="seg" data-k="tstep"><button type="button" data-v="0.25">A quarter page</button><button type="button" data-v="0.5">Half a page</button><button type="button" data-v="1">A full page</button></div></div>' +
-    '<div class="hf-row"><span>Where to tap</span><div class="seg" data-k="tzone"><button type="button" data-v="top">Anywhere moves down</button><button type="button" data-v="sides">Left back, right down</button></div></div></div>' +
+    '<div class="hf-row"><span>Where to tap</span><div class="seg" data-k="tzone"><button type="button" data-v="top">Anywhere moves down</button><button type="button" data-v="sides">Left back, right down</button><button type="button" data-v="sidesr">Left down, right back</button></div></div></div>' +
     '<div class="hf-set" data-for="nod">' +
     '<div class="hf-row"><span>Nod size</span><div class="seg" data-k="sens"><button type="button" data-v="gentle">Small</button><button type="button" data-v="normal">Medium</button><button type="button" data-v="strong">Big</button></div></div>' +
     '<div class="hf-row"><span>Each nod moves</span><div class="seg" data-k="step"><button type="button" data-v="0.45">Half a screen</button><button type="button" data-v="0.7">Most of it</button><button type="button" data-v="0.9">A full screen</button></div></div>' +
@@ -243,7 +243,7 @@
   }
   function startAuto() { stopAll(true); run = 'auto'; paused = false; lt = 0; carry = 0; pos = null; set = -1; raf = requestAnimationFrame(autoTick); status('Auto-scroll', true); wake(true); }
 
-  function tapMsg() { return S.tzone === 'sides' ? 'Tap to scroll · left goes back, right goes down' : 'Tap to scroll · top of the screen goes back'; }
+  function tapMsg() { return S.tzone === 'sides' ? 'Tap to scroll · left goes back, right goes down' : S.tzone === 'sidesr' ? 'Tap to scroll · left goes down, right goes back' : 'Tap to scroll · top of the screen goes back'; }
   function startTap() { stopAll(true); run = 'tap'; paused = false; status(tapMsg(), true); wake(true); }
 
   var video = null, stream = null, lm = null, det = null, loopT = 0, lastFace = 0, loading = false, errs = 0, lastFit = '', wasHeld = false;
@@ -353,7 +353,8 @@
     if (t.closest('.hf-stop')) { choose('off'); toast('Hands-free off'); return; }
     if (run === 'auto' && art.contains(t)) { setPaused(!paused); }
     if (run === 'tap' && art.contains(t) && !t.closest('a, button, input, select, textarea, label, summary, [contenteditable], .hf-pill, .hf-sheet') && !(getSelection && String(getSelection()).length)) {
-      page((S.tzone === 'sides' ? ev.clientX < innerWidth / 2 : ev.clientY < innerHeight * 0.25) ? -1 : 1, +S.tstep || 0.5);
+      var left = ev.clientX < innerWidth / 2;
+      page((S.tzone === 'sides' ? left : S.tzone === 'sidesr' ? !left : ev.clientY < innerHeight * 0.25) ? -1 : 1, +S.tstep || 0.5);
     }
   });
   document.addEventListener('change', function (ev) { var c = ev.target; if (c.matches && c.matches('.hf-sheet input[data-k]')) { S[c.dataset.k] = c.checked; save(); } });
@@ -375,6 +376,93 @@
   }
   paint();
 })();
+
+  (function () {
+    var sh = document.querySelector('.hf-sheet'); if (!sh) return;
+    var box = document.createElement('div'); box.className = 'hf-save';
+    box.innerHTML = '<div class="hf-row"><span>Keep this story</span><button type="button" class="hf-save-btn">Save this story</button></div>' +
+      '<p class="hf-note hf-save-msg" role="status">' + (SID ? 'Saves every chapter as one file in your Downloads. It reads without internet.' : 'Saves this page as a file in your Downloads. It reads without internet.') + '</p>';
+    var modes = sh.querySelector('.hf-modes'); if (modes) modes.parentNode.insertBefore(box, modes.nextSibling); else sh.appendChild(box);
+    var sb = box.querySelector('.hf-save-btn'), msg = box.querySelector('.hf-save-msg'), busy = false;
+    function say(s) { msg.textContent = s; }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    var DROP = /^(SCRIPT|STYLE|NOSCRIPT|IFRAME|FRAME|FORM|BUTTON|SELECT|INPUT|TEXTAREA|SVG|IMG|PICTURE|VIDEO|AUDIO|CANVAS|OBJECT|EMBED|NAV|ASIDE|FOOTER|HEADER|LINK|META|TEMPLATE)$/;
+    var KEEP = /^(P|BR|HR|EM|I|B|STRONG|U|S|STRIKE|DEL|INS|SUB|SUP|SMALL|BLOCKQUOTE|H[1-6]|UL|OL|LI|CENTER|DIV|TABLE|THEAD|TBODY|TR|TD|TH|PRE)$/;
+    function clean(node) {
+      var out = '';
+      for (var i = 0; i < node.childNodes.length; i++) {
+        var n = node.childNodes[i];
+        if (n.nodeType === 3) { out += esc(n.nodeValue); continue; }
+        if (n.nodeType !== 1 || DROP.test(n.tagName) || /(^|\s)(hf|oi)(-|\s|$)/.test(n.getAttribute('class') || '')) continue;
+        var t = n.tagName.toLowerCase();
+        if (t === 'br' || t === 'hr') out += '<' + t + '>';
+        else if (KEEP.test(n.tagName)) out += '<' + t + '>' + clean(n) + '</' + t + '>';
+        else out += clean(n);
+      }
+      return out;
+    }
+    function info() {
+      var title = document.title || location.hostname, author = '';
+      if (SID) {
+        var tt = document.querySelector('#profile_top b.xcontrast_txt, #content b');
+        title = tt && tt.textContent.trim() ? tt.textContent.trim() : title.replace(/\s*\|\s*FanFiction\s*$/i, '').replace(/,\s*an?\s+.*fanfic\s*$/i, '').replace(/\s+Chapter\s+\d+.*$/i, '');
+        var au = document.querySelector('#profile_top a[href^="/u/"], #content a[href^="/u/"], a[href^="/u/"]'); if (au) author = au.textContent.trim();
+      } else {
+        var h = document.querySelector('h1'); if (h && h.textContent.trim()) title = h.textContent.trim();
+        var am = document.querySelector('meta[name="author"]'); if (am && am.content) author = am.content;
+      }
+      return { title: title.trim() || 'Story', author: author, url: SID ? location.origin + '/s/' + SID + '/1/' : location.href.split('#')[0] };
+    }
+    function chName(n) { var s = document.querySelector('select#chap_select'), o = s && s.options[n - 1]; return o ? o.textContent.replace(/^\s*\d+\.\s*/, '').trim() || 'Chapter ' + n : 'Chapter ' + n; }
+    function here() { var e = document.querySelector(window.__HF_CFG.article) || document.body; return clean(e); }
+    function fetchCh(n) {
+      return fetch(location.origin + '/s/' + SID + '/' + n + '/', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.text() : null; }).then(function (h) {
+        if (!h) return null;
+        var e = new DOMParser().parseFromString(h, 'text/html').querySelector('#storytext, #storycontent');
+        return e && e.textContent.trim().length > 50 ? clean(e) : null;
+      }).catch(function () { return null; });
+    }
+    function file(s, chs) {
+      var many = chs.length > 1;
+      return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<meta name="hands-free-story" content="' + esc(s.url) + '"><meta name="author" content="' + esc(s.author) + '"><title>' + esc(s.title) + '</title>' +
+        '<style>body{max-width:40em;margin:0 auto;padding:16px 18px 60px;font:18px/1.65 Georgia,serif;color:#17161C;background:#FAF9FC}a{color:#9E1F45}' +
+        '@media (prefers-color-scheme:dark){body{color:#EFECF4;background:#131118}a{color:#E9678A}}h1{font-size:1.5em;line-height:1.25;margin:.4em 0}' +
+        'h2{font-size:1.2em;margin:2.4em 0 .8em}.by{color:#6E6879;font:15px/1.4 system-ui,sans-serif;word-break:break-all}nav a{display:block;margin:6px 0;font:16px/1.4 system-ui,sans-serif}</style></head><body>' +
+        '<h1>' + esc(s.title) + '</h1><p class="by">' + (s.author ? 'by ' + esc(s.author) + '<br>' : '') + '<a href="' + esc(s.url) + '">' + esc(s.url) + '</a></p>' +
+        (many ? '<nav>' + chs.map(function (c, i) { return '<a href="#c' + (i + 1) + '">' + esc(c.name) + '</a>'; }).join('') + '</nav>' : '') +
+        chs.map(function (c, i) { return '<section id="c' + (i + 1) + '" data-name="' + esc(c.name) + '">' + (many ? '<h2>' + esc(c.name) + '</h2>' : '') + c.html + '</section>'; }).join('') +
+        '</body></html>';
+    }
+    function download(name, html) {
+      var u = URL.createObjectURL(new Blob([html], { type: 'text/html' })), a = document.createElement('a');
+      a.href = u; a.download = name; a.hidden = true; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
+    }
+    sb.addEventListener('click', function () {
+      if (busy) return; busy = true; sb.disabled = true;
+      var s = info(), n = SID ? total() : 1, chs = [], stop = 0, i = 1;
+      var name = (s.title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'story') + '.html';
+      function finish() {
+        busy = false; sb.disabled = false;
+        if (!chs.length) { say('Nothing saved: this page has no story text I can read.'); return; }
+        download(name, file(s, chs));
+        say(stop ? 'Saved chapters 1 to ' + chs.length + ' of ' + n + ' as ' + name + '. Chapter ' + stop + ' did not load (FanFiction.net may want a check): open it, then save again.'
+          : SID ? 'Saved all ' + n + ' chapter' + (n > 1 ? 's' : '') + ' as ' + name + ' in your Downloads.' : 'Saved this page as ' + name + ' in your Downloads.');
+      }
+      function next() {
+        if (i > n) return finish();
+        say('Saving chapter ' + i + ' of ' + n + '…');
+        if (!SID || i === CH) { chs.push({ name: SID ? chName(i) : s.title, html: here() }); i++; return next(); }
+        fetchCh(i).then(function (h) {
+          if (!h) { stop = i; return finish(); }
+          chs.push({ name: chName(i), html: h }); i++;
+          setTimeout(next, 1500);
+        });
+      }
+      next();
+    });
+  })();
 
   } catch (e) {   // 1.2.1: the button is already on the page; tapping it says what broke instead of doing nothing
     fab.style.borderColor = '#9E1F45';

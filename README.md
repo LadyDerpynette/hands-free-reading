@@ -5,7 +5,8 @@ A Tampermonkey userscript that scrolls long reads for you, on any website, so yo
 - **Nod to scroll** — nod down to read on, nod up to go back. Uses the front camera.
 - **Turn your head** — left or right can scroll too, or move to the next / previous chapter.
 - **Auto-scroll** — the page moves by itself at the speed you pick. Tap the text to pause.
-- **Tap to scroll** — tap to move a quarter, half or full page. Either "anywhere moves down", or "left half back, right half down".
+- **Tap to scroll** — tap to move a quarter, half or full page. Choose "anywhere moves down", "left half back, right half down", or "left half down, right half back".
+- **Save this story** — keeps the story as one file in your Downloads that reads without internet. On FanFiction.net it saves every chapter; on other sites, the page you're on. Text and plain formatting only.
 
 FanFiction.net chapters know their next and previous chapter. On other sites the script uses the page's own Next / Previous links (English and French).
 
