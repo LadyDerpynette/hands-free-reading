@@ -13,7 +13,7 @@ FanFiction.net chapters know their next and previous chapter. On other sites the
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) (Firefox on Android works, as do desktop Chrome, Edge and Firefox).
 2. Open the install link and press **Install**:
-   **https://obsession-index.tinkerer.workers.dev/ffn-hands-free.user.js**
+   **https://raw.githubusercontent.com/LadyDerpynette/hands-free-reading/main/ffn-hands-free.user.js**
 
 Install from the link rather than pasting the file: Tampermonkey then updates it by itself.
 
