@@ -37,7 +37,16 @@ The camera picture never leaves your phone. Face tracking runs on the device wit
 - **A red notice says two copies are on** — an older copy is still installed. Delete it in Tampermonkey, then reload.
 - **Nods don't register** — hold the phone so your whole face is in the small preview, then tap Reset to take your starting position again.
 
+## License: personal use only
+
+You may use this script for your own personal use. **Commercial use is not allowed**: you may not sell it, bundle it into a paid product or service, or use it in a business.
+
+The legal terms are the [PolyForm Noncommercial License 1.0.0](LICENSE.md). If you share a copy, keep the license and the copyright notice with it.
+
+Copyright LadyDerpynette.
+
 ## Files
 
 - `ffn-hands-free.user.js` — the script. It is a built file; changes are made in its source and rebuilt, so edits here are overwritten.
 - `CHANGELOG.md` — what each version changed.
+- `LICENSE.md` — the license terms.
